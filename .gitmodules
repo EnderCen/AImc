@@ -1,3 +1,9 @@
 [submodule "roop"]
 	path = roop
 	url = https://github.com/s0md3v/roop.git
+[submodule "viet-tts"]
+	path = viet-tts
+	url = https://github.com/dangvansam/viet-tts.git
+[submodule "SadTalker"]
+	path = SadTalker
+	url = https://github.com/OpenTalker/SadTalker.git

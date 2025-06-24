@@ -48,7 +48,7 @@ app.openapi = custom_openapi
 
 UPLOAD_DIR = Path("uploads")
 STATIC_DIR = Path("static")
-MODELS_DIR = Path("models")
+MODELS_DIR = Path("roop/models")
 UPLOAD_DIR.mkdir(exist_ok=True)
 STATIC_DIR.mkdir(exist_ok=True)
 VIDEO_DIR = STATIC_DIR / "Videos"
@@ -83,7 +83,7 @@ async def face_swap(source: UploadFile = File(...), target: UploadFile = File(..
     
     print(f"[FACE_SWAP] Thực hiện face swap với mô hình: {roop.globals.model_path}")
     command = [
-        "python", "run.py",
+        "python", "roop/run.py",
         "-s", str(source_path),
         "-t", str(target_path),
         "-o", str(output_path),
@@ -136,7 +136,7 @@ async def animate_image():
         os.remove(old_video)
 
     command = [
-        "python", "inference.py",
+        "python", "SadTalker/inference.py",
         "--driven_audio", str(audio_path),
         "--source_image", str(image_path),
         "--still",

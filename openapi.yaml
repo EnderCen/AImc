@@ -1,0 +1,722 @@
+openapi: 3.0.3
+info:
+  title: Hệ thống Hoán đổi Khuôn mặt và Giọng nói
+  description: |
+    Hệ thống API tích hợp nhiều tính năng xử lý AI:
+
+    - 🎭 Hoán đổi khuôn mặt giữa hai ảnh
+    - 🗣️ Chuyển văn bản thành giọng nói
+    - 🖼️ Tải ảnh và tệp âm thanh
+    - 🎬 Tạo video hoạt hình từ ảnh và âm thanh
+    - 🧠 Chuyển đổi và quản lý mô hình AI động
+
+    Công nghệ sử dụng: vietTTS, Wav2Lip, InsightFace, OpenAI...
+  version: 1.0.0
+  contact:
+    name: Nhóm phát triển AI
+    email: support@example.com
+
+servers:
+  - url: http://localhost:55021
+    description: Local development server
+
+tags:
+  - name: Xử lý ảnh
+    description: Các API liên quan đến xử lý và hoán đổi khuôn mặt
+  - name: Chuyển đổi giọng nói
+    description: Các API liên quan đến chuyển văn bản thành giọng nói
+  - name: Tạo video
+    description: Các API liên quan đến tạo video hoạt hình
+  - name: Quản lý mô hình
+    description: Các API liên quan đến quản lý và thay đổi mô hình AI
+  - name: Tải tệp
+    description: Các API liên quan đến tải ảnh và âm thanh
+  - name: Tạo kịch bản
+    description: Các API liên quan đến tạo kịch bản bằng AI
+
+paths:
+  /:
+    get:
+      summary: Trang chính của ứng dụng
+      description: |
+        Trả về trang HTML chính của ứng dụng, được sử dụng làm giao diện người dùng mặc định. Trang này thường chứa các liên kết hoặc công cụ để tương tác với các API của hệ thống.
+
+        **Cách sử dụng**:
+        - Truy cập endpoint này để tải giao diện web của ứng dụng.
+        - Đảm bảo tệp `main.html` tồn tại tại đường dẫn được chỉ định (`~/Dev/roop/Web/main.html`).
+
+        **Lưu ý**:
+        - Nếu tệp HTML không tồn tại, API sẽ trả về mã lỗi 404 với thông báo "Index file not found".
+        - Có thể tùy chỉnh giao diện bằng cách chỉnh sửa tệp `main.html` hoặc thay đổi đường dẫn trong mã nguồn.
+      operationId: root
+      responses:
+        '200':
+          description: Trang HTML được tải thành công và trả về dưới dạng nội dung text/html.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: Nội dung HTML của trang chính, chứa giao diện người dùng hoặc thông tin về ứng dụng.
+        '404':
+          description: Không tìm thấy tệp `main.html` tại đường dẫn được chỉ định.
+          content:
+            text/html:
+              schema:
+                type: string
+                description: Thông báo lỗi HTML với nội dung "Index file not found".
+
+  /face_swap/:
+    post:
+      summary: Hoán đổi khuôn mặt giữa hai hình ảnh
+      description: |
+        Nhận hai hình ảnh đầu vào: ảnh nguồn (chứa khuôn mặt cần chuyển) và ảnh đích (nơi khuôn mặt sẽ được áp dụng). API sử dụng mô hình AI (mặc định là `inswapper_128.onnx`) để thực hiện hoán đổi khuôn mặt, tạo ra một hình ảnh mới với khuôn mặt từ ảnh nguồn được tích hợp tự nhiên vào ảnh đích.
+
+        **Cách sử dụng**:
+        - Tải lên hai tệp hình ảnh (định dạng JPG, PNG, v.v.) thông qua form-data.
+        - API sẽ xử lý và lưu kết quả vào thư mục `static` với tên `output.jpg`.
+        - Kiểm tra phản hồi JSON để xác nhận quá trình hoàn tất và lấy thông tin về mô hình đã sử dụng.
+
+        **Lưu ý**:
+        - Đảm bảo cả hai ảnh đều chứa ít nhất một khuôn mặt rõ ràng để đạt kết quả tốt nhất.
+        - Kích thước và chất lượng ảnh có thể ảnh hưởng đến kết quả; nên sử dụng ảnh có độ phân giải cao.
+        - Có thể thay đổi mô hình AI thông qua endpoint `/change_model/` để tùy chỉnh hiệu suất hoặc chất lượng.
+        - Xử lý có thể mất vài giây tùy thuộc vào tài nguyên máy tính và kích thước ảnh.
+      operationId: face_swap
+      tags:
+        - Xử lý ảnh
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  format: binary
+                  description: Ảnh chứa khuôn mặt cần chuyển
+                target:
+                  type: string
+                  format: binary
+                  description: Ảnh chứa khuôn mặt đích
+              required:
+                - source
+                - target
+      responses:
+        '200':
+          description: Hoán đổi khuôn mặt thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Face swap completed!
+                  model_used:
+                    type: string
+                    example: /path/to/model/inswapper_128.onnx
+        '500':
+          description: Lỗi khi thực hiện hoán đổi khuôn mặt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /text_to_speech/:
+    post:
+      summary: Chuyển văn bản thành giọng nói
+      description: |
+        Sử dụng công cụ vietTTS để chuyển đổi văn bản đầu vào thành tệp âm thanh WAV với giọng nói tiếng Việt được chọn. API hỗ trợ nhiều giọng nói khác nhau (được đánh số từ 1 đến 24), cho phép tạo ra âm thanh tự nhiên và phù hợp với các ứng dụng như lồng tiếng, trợ lý ảo, hoặc nội dung giáo dục.
+
+        **Cách sử dụng**:
+        - Cung cấp văn bản cần chuyển đổi và mã số giọng nói thông qua form-data.
+        - API sẽ tạo tệp âm thanh và lưu vào thư mục `static` với tên `output.wav`.
+        - Phản hồi JSON chứa đường dẫn đến tệp âm thanh đầu ra.
+
+        **Lưu ý**:
+        - Văn bản nên ngắn gọn và không chứa ký tự đặc biệt phức tạp để đảm bảo chất lượng âm thanh.
+        - Kiểm tra danh sách giọng nói hợp lệ (1-24) trong tài liệu của vietTTS trước khi sử dụng.
+        - Tệp WAV đầu ra có thể được sử dụng trực tiếp hoặc chuyển đổi sang định dạng khác (như MP3) nếu cần.
+        - Xử lý nhanh nhưng có thể bị ảnh hưởng nếu hệ thống vietTTS chưa được cài đặt hoặc cấu hình đúng.
+      operationId: text_to_speech
+      tags:
+        - Chuyển đổi giọng nói
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Nội dung văn bản cần chuyển thành giọng nói
+                voice:
+                  type: string
+                  description: Tên giọng nói sẽ sử dụng (từ 1 đến 24)
+              required:
+                - text
+                - voice
+      responses:
+        '200':
+          description: Chuyển đổi văn bản thành giọng nói thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  output_audio:
+                    type: string
+                    example: /static/output.wav
+        '500':
+          description: Lỗi khi thực hiện chuyển đổi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /animate_image/:
+    post:
+      summary: Tạo video hoạt hình từ ảnh và âm thanh
+      description: |
+        Tạo một video hoạt hình bằng cách kết hợp một hình ảnh tĩnh (`output.jpg`) và một tệp âm thanh (`output.wav`) sử dụng công cụ Wav2Lip. API đồng bộ chuyển động khuôn mặt trong ảnh với âm thanh, tạo hiệu ứng như nhân vật trong ảnh đang nói, phù hợp cho các video quảng cáo, giải trí, hoặc giáo dục.
+
+        **Cách sử dụng**:
+        - Đảm bảo tệp `output.jpg` và `output.wav` đã tồn tại trong thư mục `static` (có thể tải lên Alt+Ctrl/Cmd+Enter để tải lên qua các endpoint `/upload_image` và `/upload_voice`).
+        - Gửi yêu cầu POST đến endpoint này để tạo video.
+        - Video đầu ra được lưu vào thư mục `static/Videos` với tên `output_web.mp4` (hoặc tên khác nếu tệp đã tồn tại).
+
+        **Lưu ý**:
+        - Ảnh cần chứa một khuôn mặt rõ ràng để Wav2Lip có thể đồng bộ chính xác.
+        - Tệp âm thanh nên có chất lượng tốt và thời lượng phù hợp để video trông tự nhiên.
+        - API sử dụng ffmpeg để mã hóa video đầu ra thành định dạng MP4, vì vậy cần cài đặt ffmpeg trên hệ thống.
+        - Quá trình tạo video có thể mất thời gian, đặc biệt với ảnh hoặc âm thanh dài.
+        - Các video cũ trong thư mục `static` sẽ bị xóa trước khi tạo video mới để tránh xung đột.
+      operationId: animate_image
+      tags:
+        - Tạo video
+      responses:
+        '200':
+          description: Tạo video thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  output_video:
+                    type: string
+                    example: /static/Videos/output_web.mp4
+        '400':
+          description: Thiếu tệp đầu vào (ảnh hoặc âm thanh)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Lỗi khi tạo video
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /upload_image:
+    post:
+      summary: Tải ảnh lên
+      description: |
+        Tải một tệp hình ảnh lên hệ thống và lưu vào thư mục `static` với tên `output.jpg`. Tệp này có thể được sử dụng làm đầu vào cho các quá trình như hoán đổi khuôn mặt hoặc tạo video hoạt hình.
+
+        **Cách sử dụng**:
+        - Tải lên một tệp hình ảnh (JPG, PNG, v.v.) thông qua form-data.
+        - API sẽ ghi đè bất kỳ tệp `output.jpg` hiện có trong thư mục `static`.
+        - Phản hồi JSON xác nhận quá trình tải lên thành công.
+
+        **Lưu ý**:
+        - Đảm bảo ảnh có định dạng hợp lệ và kích thước phù hợp để tránh lỗi xử lý.
+        - Nếu đã có tệp `output.jpg`, nó sẽ bị ghi đè mà không có cảnh báo.
+        - Ảnh tải lên nên chứa khuôn mặt rõ ràng nếu dự định sử dụng cho hoán đổi khuôn mặt hoặc tạo video.
+      operationId: upload_image
+      tags:
+        - Tải tệp
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Ảnh cần tải lên
+              required:
+                - image
+      responses:
+        '200':
+          description: Tải ảnh thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Tải ảnh thành công
+        '500':
+          description: Lỗi khi tải ảnh
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /upload_voice:
+    post:
+      summary: Tải tệp âm thanh lên
+      description: |
+        Tải một tệp âm thanh lên hệ thống và lưu vào thư mục `static` với tên `output.wav`. Tệp này có thể được sử dụng làm đầu vào cho quá trình tạo video hoạt hình.
+
+        **Cách sử dụng**:
+        - Tải lên một tệp âm thanh (WAV, MP3, v.v.) thông qua form-data.
+        - API sẽ ghi đè bất kỳ tệp `output.wav` hiện có trong thư mục `static`.
+        - Phản hồi JSON xác nhận quá trình tải lên thành công.
+
+        **Lưu ý**:
+        - Đảm bảo âm thanh có định dạng hợp lệ và chất lượng tốt để đảm bảo đồng bộ chính xác trong video.
+        - Nếu đã có tệp `output.wav`, nó sẽ bị ghi đè mà không có cảnh báo.
+        - Tệp WAV là định dạng ưu tiên để đảm bảo tương thích với Wav2Lip.
+      operationId: upload_voice
+      tags:
+        - Tải tệp
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                voice:
+                  type: string
+                  format: binary
+                  description: Tệp âm thanh cần tải lên
+              required:
+                - voice
+      responses:
+        '200':
+          description: Tải âm thanh thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Tải giọng nói thành công
+        '500':
+          description: Lỗi khi tải âm thanh
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /generate_script/:
+    post:
+      summary: Tạo kịch bản bằng AI
+      description: |
+        Sử dụng mô hình AI (mặc định là Gemini) để tạo kịch bản hoặc nội dung văn bản từ văn bản đầu vào. API hỗ trợ tùy chỉnh nhà cung cấp AI, khóa API, và tên mô hình, cho phép tạo nội dung sáng tạo như kịch bản phim, bài quảng cáo, hoặc nội dung mạng xã hội.
+
+        **Cách sử dụng**:
+        - Cung cấp văn bản đầu vào, nhà cung cấp AI, khóa API, và tên mô hình thông qua form-data.
+        - API sẽ gọi script `chatbox.py` để xử lý yêu cầu và trả về nội dung được tạo trong phản hồi JSON.
+        - Kiểm tra phản hồi để lấy nội dung kịch bản đã được tạo.
+
+        **Lưu ý**:
+        - Văn bản đầu vào nên rõ ràng và cụ thể để đạt được kết quả tốt nhất.
+        - Khóa API phải hợp lệ và có đủ hạn mức để xử lý yêu cầu.
+        - Hỗ trợ các nhà cung cấp AI khác nhau, nhưng Gemini là mặc định.
+        - Script `chatbox.py` phải được cài đặt và cấu hình đúng trên hệ thống.
+      operationId: generate_script
+      tags:
+        - Tạo kịch bản
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Văn bản đầu vào để tạo kịch bản
+                ai_provider:
+                  type: string
+                  default: gemini
+                  description: Nhà cung cấp AI (mặc định là gemini)
+                api_key:
+                  type: string
+                  description: Khóa API của nhà cung cấp AI
+                model_name:
+                  type: string
+                  default: gemini-1.5-pro
+                  description: Tên mô hình AI (mặc định là gemini-1.5-pro)
+              required:
+                - text
+                - api_key
+      responses:
+        '200':
+          description: Tạo kịch bản thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  script_output:
+                    type: string
+                    description: Kết quả kịch bản được tạo
+        '500':
+          description: Lỗi khi tạo kịch bản
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /change_model/:
+    post:
+      summary: Thay đổi mô hình AI
+      description: |
+        Tải lên một tệp mô hình AI mới (thường là tệp ONNX hoặc tương tự) và kích hoạt nó để sử dụng trong quá trình hoán đổi khuôn mặt. API lưu mô hình vào thư mục `models`, cập nhật cấu hình, và tải mô hình vào bộ nhớ để xử lý các yêu cầu tiếp theo.
+
+        **Cách sử dụng**:
+        - Tải lên tệp mô hình thông qua form-data.
+        - API sẽ kiểm tra tệp, lưu với tên duy nhất (tránh ghi đè), và kích hoạt mô hình.
+        - Phản hồi JSON chứa thông tin về mô hình đã tải lên, bao gồm tên, đường dẫn, và trạng thái.
+
+        **Lưu ý**:
+        - Tệp mô hình phải tương thích với hệ thống hoán đổi khuôn mặt (InsightFace hoặc tương tự).
+        - Đảm bảo thư mục `models` có quyền ghi để lưu tệp.
+        - Nếu tệp đã tồn tại, API sẽ tự động thêm hậu tố số để tránh xung đột (ví dụ: `model_1.onnx`).
+        - Kích hoạt mô hình có thể yêu cầu tài nguyên đáng kể, đặc biệt với các mô hình lớn.
+        - Nếu có lỗi, API sẽ xóa tệp đã tải lên để tránh hỏng hệ thống.
+      operationId: change_model
+      tags:
+        - Quản lý mô hình
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                model_file:
+                  type: string
+                  format: binary
+                  description: Tệp mô hình AI cần tải lên
+              required:
+                - model_file
+      responses:
+        '200':
+          description: Thay đổi mô hình thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  model_name:
+                    type: string
+                    description: Tên của mô hình
+                  model_path:
+                    type: string
+                    description: Đường dẫn đầy đủ đến mô hình
+                  relative_path:
+                    type: string
+                    description: Đường dẫn tương đối của mô hình
+        '400':
+          description: Thiếu tệp mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '500':
+          description: Lỗi khi thay đổi mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /models/{model_path:path}:
+    get:
+      summary: Phục vụ tệp mô hình
+      description: |
+        Truy xuất và trả về một tệp mô hình từ thư mục `models` dựa trên đường dẫn được cung cấp. API được sử dụng để tải xuống hoặc kiểm tra các mô hình đã được tải lên trước đó.
+
+        **Cách sử dụng**:
+        - Gửi yêu cầu GET với đường dẫn tương đối đến tệp mô hình (ví dụ: `models/new_model.onnx`).
+        - API sẽ trả về tệp dưới dạng luồng nhị phân nếu tệp tồn tại.
+        - Sử dụng đường dẫn từ phản hồi của endpoint `/change_model/` để truy cập đúng tệp.
+
+        **Lưu ý**:
+        - Đường dẫn phải chính xác và tệp phải tồn tại trong thư mục `models`.
+        - API trả về tệp dưới dạng octet-stream, phù hợp để tải xuống hoặc sử dụng trực tiếp.
+        - Đảm bảo quyền truy cập vào thư mục `models` để tránh lỗi.
+      operationId: serve_model
+      tags:
+        - Quản lý mô hình
+      parameters:
+        - name: model_path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Đường dẫn tương đối đến tệp mô hình
+      responses:
+        '200':
+          description: Tệp mô hình được trả về thành công
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Không tìm thấy tệp mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /activate_model/:
+    post:
+      summary: Kích hoạt mô hình AI
+      description: |
+        Kích hoạt một mô hình AI đã được tải lên trước đó (nằm trong thư mục `models`) để sử dụng cho các yêu cầu hoán đổi khuôn mặt. API cập nhật cấu hình và tải mô hình vào bộ nhớ để xử lý.
+
+        **Cách sử dụng**:
+        - Gửi yêu cầu POST với JSON chứa `model_path` (đường dẫn tương đối đến tệp mô hình).
+        - API kiểm tra sự tồn tại của tệp, kích hoạt mô hình, và cập nhật tệp cấu hình (`model_config.json`).
+        - Phản hồi JSON xác nhận mô hình đã được kích hoạt và cung cấp thông tin chi tiết.
+
+        **Lưu ý**:
+        - Đường dẫn phải trỏ đến tệp mô hình hợp lệ trong thư mục `models`.
+        - Kích hoạt mô hình có thể yêu cầu tài nguyên đáng kể, đặc biệt với các mô hình lớn.
+        - Đảm bảo thư mục chứa tệp cấu hình có quyền ghi để lưu cập nhật.
+        - Nếu mô hình không hợp lệ hoặc không tồn tại, API sẽ trả về lỗi tương ứng.
+      operationId: activate_model
+      tags:
+        - Quản lý mô hình
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_path:
+                  type: string
+                  description: Đường dẫn tương đối đến tệp mô hình
+              required:
+                - model_path
+      responses:
+        '200':
+          description: Kích hoạt mô hình thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Kích hoạt mô hình thành công
+                  model_path:
+                    type: string
+                    description: Đường dẫn đầy đủ đến mô hình
+        '400':
+          description: Thiếu model_path
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '404':
+          description: Không tìm thấy tệp mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '500':
+          description: Lỗi khi kích hoạt mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+
+  /delete_model/:
+    post:
+      summary: Xóa mô hình AI
+      description: |
+        Xóa một mô hình AI khỏi thư mục `models` dựa trên đường dẫn được cung cấp. Nếu mô hình đang được sử dụng, API sẽ chuyển về mô hình mặc định (`inswapper_128.onnx`) và cập nhật cấu hình.
+
+        **Cách sử dụng**:
+        - Gửi yêu cầu POST với JSON chứa `model_path` (đường dẫn tương đối đến tệp mô hình).
+        - API kiểm tra sự tồn tại của tệp, xóa nó, và thực hiện các bước cần thiết nếu mô hình đang được kích hoạt.
+        - Phản hồi JSON xác nhận mô hình đã được xóa và cung cấp thông tin chi tiết.
+
+        **Lưu ý**:
+        - Đường dẫn phải trỏ đến tệp mô hình hợp lệ trong thư mục `models`.
+        - Nếu mô hình đang được sử dụng, API sẽ tự động tải mô hình mặc định để đảm bảo hệ thống hoạt động bình thường.
+        - Đảm bảo thư mục `models` và tệp cấu hình có quyền ghi để thực hiện xóa và cập nhật.
+        - Nếu mô hình không tồn tại, API sẽ trả về lỗi 404.
+      operationId: delete_model
+      tags:
+        - Quản lý mô hình
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_path:
+                  type: string
+                  description: Đường dẫn tương đối đến tệp mô hình
+              required:
+                - model_path
+      responses:
+        '200':
+          description: Xóa mô hình thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Xóa mô hình thành công
+                  model_path:
+                    type: string
+                    description: Đường dẫn đầy đủ đến mô hình đã xóa
+        '400':
+          description: Thiếu model_path
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '404':
+          description: Không tìm thấy tệp mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        '500':
+          description: Lỗi khi xóa mô hình
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    
+  /face_swap_ai/:
+    post:
+      summary: Hoán đổi khuôn mặt giữa hai hình ảnh (phiên bản cải tiến)
+      description: Nhận hai hình ảnh đầu vào (ảnh nguồn và ảnh đích), thực hiện hoán đổi khuôn mặt từ ảnh nguồn sang ảnh đích, lưu kết quả vào thư mục static/Images với tên file không ghi đè.
+      operationId: face_swap_ai
+      tags:
+        - Xử lý ảnh
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  format: binary
+                  description: Ảnh chứa khuôn mặt cần chuyển
+                target:
+                  type: string
+                  format: binary
+                  description: Ảnh chứa khuôn mặt đích
+              required:
+                - source
+                - target
+      responses:
+        '200':
+          description: Hoán đổi khuôn mặt thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Face swap completed!
+                  model_used:
+                    type: string
+                    example: /path/to/model/inswapper_128.onnx
+                  output_image:
+                    type: string
+                    example: /static/Images/output.jpg
+                    description: Đường dẫn tương đối đến ảnh kết quả
+        '500':
+          description: Lỗi khi thực hiện hoán đổi khuôn mặt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Thông tin chi tiết về lỗi
